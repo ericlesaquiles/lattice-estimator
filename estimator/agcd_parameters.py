@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from sage.all import oo, binomial, log, sqrt, ceil
 
-from .nd import NoiseDistribution, DiscreteGaussian
+from .nd import NoiseDistribution, Uniform
 from .errors import InsufficientSamplesError
 
 
@@ -17,7 +17,7 @@ class AGCDParameters:
 
     lamda: int  #: expected the security level
     
-    Xr: NoiseDistribution = DiscreteGaussian(3.0)  #: the distribution from which the error term ri is drawn
+    Xr: NoiseDistribution = Uniform  #: the distribution from which the error term ri is drawn
 
     #: the number of samples allowed to an attacker,
     #: optionally `sage.all.oo` for allowing infinitely many samples.
