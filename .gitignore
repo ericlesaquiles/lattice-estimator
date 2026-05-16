@@ -1,4 +1,6 @@
 /docs/_apidoc/
 /docs/_build/
-venv/
+.venv/
+*/**/.ipynb_checkpoints
+.ipynb_checkpoints
 __pycache__
