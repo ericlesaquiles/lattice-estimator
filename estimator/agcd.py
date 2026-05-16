@@ -1,5 +1,6 @@
 import scipy.optimize as sp
 import numpy as np
+import math
 
 from estimator.agcd_parameters import AGCDParameters as Parameters
 from estimator import reduction
@@ -70,7 +71,7 @@ class Estimate:
             print("\n=== Step 1: Feasibility ===")
             print(f"  gamma - rho = {signal:.2f}")
             print(f"  eta   - rho = {gap:.2f}")
-            print(f"  Minimum n for attack: n > {min_n:.4f}")
+            print(f"  Minimum n for attack: n > {float(min_n):.4f}")
          
         # ------------------------------------------------------------------
         # Step 2 — optimal n and delta_0 bound (Theorem 2 / eq. 5)
@@ -99,7 +100,7 @@ class Estimate:
      
         if verbose:
             print(f"\n=== Step 2: Optimal n and delta_0 ===")
-            print(f"  Optimal n (continuous) = {n_opt:.4f}")
+            print(f"  Optimal n (continuous) = {float(n_opt):.4f}")
             print(f"  Rounded n              = {n}")
             print(f"  log2(delta_0) bound    = {log_delta0_bound:.6f}")
             print(f"  delta_0 bound          = {delta0:.8f}")
@@ -118,7 +119,7 @@ class Estimate:
         if verbose:
             print(f"\n=== Step 3: BKZ Blocksize ===")
             print(f"  Minimum beta = {beta}")
-            print(f"  delta_0 achieved at beta: {delta0_from_beta(beta):.8f}")
+            print(f"  delta_0 achieved at beta: {reduction.delta(beta):.8f}")
      
         # ------------------------------------------------------------------
         # Step 4 — concrete attack cost
@@ -157,7 +158,7 @@ class Estimate:
                 print(f"  WARNING: Scheme is BROKEN by implicit factorization check.")
 
         
-        print(f'Time cost for achieving {lam} bits of security, with beta = {beta}: {T}')
+        print(f'Estimated time cost for achieving {lam} bits of security, with beta = {beta}: {T} clock cycles')
 
         return {
             "rho_eff":  rho_eff,
