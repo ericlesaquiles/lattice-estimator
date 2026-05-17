@@ -125,6 +125,20 @@ class Estimate:
         # Actual cost is the bottleneck
         log2_T = max(log2_T_bkz, log2_T_lll)
 
+
+        # Return if trivial attack is better than reduction
+        if eta < log2_T:
+            print(f"\n=== Eta is small enough so that the trivial brute-force attack is enough ===")
+            return {
+                "rho_eff":  rho_eff,
+                "n":        n,
+                "delta0":   delta0,
+                "beta":     beta,
+                "T_sieve":  2**log2_T_bkz,
+                "T_lll":    T_lll,
+                "T":        2**(eta-1),
+            }
+
         lam = log2_T   # lambda in bits
 
         if verbose:
