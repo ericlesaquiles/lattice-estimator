@@ -13,15 +13,6 @@ from .conf import (
 
 class Estimate:
 
-    def _max_delta_estimate(self, eta, gamma, rho):
-        er = eta - rho
-        gr = gamma - rho
-        return 2**( er**2/(4*gr) - er/(2*gr) - er/(4*gr)*np.log((gr/er)**2 + gr/er))
-
-    def _estimate_beta_from_delta(delta):
-        beta = sp.newton(lambda n: ((beta/(2*np.pi*np.e)) * (np.pi*np.e)**(1/beta))**(1/(2*(beta - 1))), 1)
-        return beta
-    
     def __call__(
         self,
         params,
