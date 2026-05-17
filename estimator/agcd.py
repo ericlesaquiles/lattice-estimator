@@ -32,6 +32,8 @@ class Estimate:
         params = params.normalize()
         gamma, eta, rho = params.gamma, params.eta, params.rho
 
+        trivial = False
+        GCD = False
         broken = False
         rho_eff = rho
 
@@ -126,40 +128,44 @@ class Estimate:
         log2_T = max(log2_T_bkz, log2_T_lll)
 
 
-        # Return if trivial attack is better than reduction
+        # Estimates time taken for GCD attack (as per section 4 of "Efficient AGCD-based homomorphic encryption for matrix and vector arithmetic)
+        # Vanilla AGCD takes n = 1
+        T_gcd = rho**2 * 2**(rho + rho/2) * gamma * math.log2(gamma)
+
+        # Return if GCD attack is better than reduction
+        if math.log2(T_gcd) < log2_T:
+            GCD = True
         if eta < log2_T:
-            print(f"\n=== Eta is small enough so that the trivial brute-force attack is enough ===")
-            return {
-                "rho_eff":  rho_eff,
-                "n":        n,
-                "delta0":   delta0,
-                "beta":     beta,
-                "T_sieve":  2**log2_T_bkz,
-                "T_lll":    T_lll,
-                "T":        2**(eta-1),
-            }
+            trivial = True
+
+        # Actual running time of attack is the minimum of the attacks taken into consideration
+        log2_T = min(log2_T, eta, math.log2(T_gcd))
 
         lam = log2_T   # lambda in bits
 
         if verbose:
-            print(f"\n=== Step 4: Attack Cost (Section 3.3, b_max = gamma - rho = {b_max:.2f}) ===")
+            print(f"\n=== Step 4: Attack Cost  ===")
             print(f"  Sieving cost:  log2(T_sieve) = {log2_T_bkz:.2f} bits")
             print(f"  LLL cost:      log2(T_lll)   = {log2_T_lll:.2f} bits")
-            print(f"  Bottleneck:    log2(T)        = {log2_T:.2f} bits")
+            print(f"  Reduction regime dominated by {"sieving" if log2_T_lll < log2_T_bkz else "LLL"}")
+            print(f"  Trivial cost:  eta           = {eta} bits")
+            print(f"  GCD cost:      log2(T_gcd)   = {math.log2(T_gcd):.2f} bits")
 
-            print(f"\n=== Step 5: Asymptotic Cross-check ===")
-            asym = (signal / (gap ** 2)) * math.log2(signal / (gap ** 2))
-            print(f"  (gamma-rho)/(eta-rho)^2 * log(...) = {asym:.4f}")
-            print(f"  (Should be proportional to lambda = {lam:.2f})")
+            print(f"  Bottleneck:    log2(T)       = {log2_T:.2f} bits")
 
             print(f"\n=== Result ===")
             print(f"  T      ≈ 2^{log2_T:.2f} clock cycles")
             print(f"  lambda ≈ {lam:.2f} bits")
+            if trivial:
+                print(f"  WARNING: Trivial attack is better than lattice reduction.")
+            if GCD:
+                print(f"  WARNING: GCD attack is better than lattice reduction.")
             if broken:
                 print(f"  WARNING: Scheme is BROKEN by implicit factorization check.")
 
 
-        print(f'Estimated time cost for achieving {lam} bits of security, with beta = {beta}: {2**log2_T} clock cycles')
+
+        print(f'Estimated time cost for achieving {lam:.2f} bits of security, with beta = {beta}: {2**log2_T} clock cycles')
 
         return {
             "rho_eff":  rho_eff,
