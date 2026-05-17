@@ -14,8 +14,6 @@ class AGCDParameters:
     gamma: int  #: the size in bits of ai
     eta: int    #: the size in bits of p
     rho: int    #: the size in bits of ri
-
-    lamda: int  #: expected the security level
     
     Xr: NoiseDistribution = Uniform  #: the distribution from which the error term ri is drawn
 

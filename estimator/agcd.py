@@ -44,7 +44,7 @@ class Estimate:
         :param catch_exceptions: When an estimate fails, just print a warning.
         """
         params = params.normalize()
-        gamma, eta, rho, lamda = params.gamma, params.eta, params.rho, params.lamda
+        gamma, eta, rho = params.gamma, params.eta, params.rho
     
         broken = False
         rho_eff = rho 
