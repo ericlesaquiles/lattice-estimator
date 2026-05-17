@@ -4,11 +4,7 @@ import math
 
 from estimator.agcd_parameters import AGCDParameters as Parameters
 from estimator import reduction
-
-from .conf import (
-    red_cost_model as red_cost_model_default,
-    red_shape_model as red_shape_model_default,
-)
+from estimator.reduction import RC
 
 
 class Estimate:
@@ -16,8 +12,7 @@ class Estimate:
     def __call__(
         self,
         params,
-        red_cost_model=red_cost_model_default,
-        red_shape_model=red_shape_model_default,
+        red_cost_model=RC.ELHL26,
         deny_list=tuple(),
         add_list=tuple(),
         jobs=1,
@@ -121,24 +116,23 @@ class Estimate:
         # Sieving-dominated cost: T = 8 * n * 2^(0.292*beta + 16.4)
         # log2_T_sieve = math.log2(8 * n) + 0.292 * beta + 16.4
         # Actually, we might want to outsource the cost model
-        T_bkz = red_cost_model(beta, n)
+        log2_T_bkz = red_cost_model(beta, n)
 
         # LLL-dominated cost: T = 0.00127 * n^3.18 * b_max^1.83
         T_lll = 0.00127 * (n ** 3.18) * (b_max ** 1.83)
         log2_T_lll = math.log2(T_lll) if T_lll > 0 else 0
 
         # Actual cost is the bottleneck
-        log2_T = max(log2_T_sieve, log2_T_lll)
-        T = 2 ** log2_T
-     
+        log2_T = max(log2_T_bkz, log2_T_lll)
+
         lam = log2_T   # lambda in bits
-     
+
         if verbose:
             print(f"\n=== Step 4: Attack Cost (Section 3.3, b_max = gamma - rho = {b_max:.2f}) ===")
-            print(f"  Sieving cost:  log2(T_sieve) = {log2_T_sieve:.2f} bits")
+            print(f"  Sieving cost:  log2(T_sieve) = {log2_T_bkz:.2f} bits")
             print(f"  LLL cost:      log2(T_lll)   = {log2_T_lll:.2f} bits")
             print(f"  Bottleneck:    log2(T)        = {log2_T:.2f} bits")
-     
+
             print(f"\n=== Step 5: Asymptotic Cross-check ===")
             asym = (signal / (gap ** 2)) * math.log2(signal / (gap ** 2))
             print(f"  (gamma-rho)/(eta-rho)^2 * log(...) = {asym:.4f}")
@@ -151,16 +145,16 @@ class Estimate:
                 print(f"  WARNING: Scheme is BROKEN by implicit factorization check.")
 
 
-        print(f'Estimated time cost for achieving {lam} bits of security, with beta = {beta}: {T} clock cycles')
+        print(f'Estimated time cost for achieving {lam} bits of security, with beta = {beta}: {2**log2_T} clock cycles')
 
         return {
             "rho_eff":  rho_eff,
             "n":        n,
             "delta0":   delta0,
             "beta":     beta,
-            "T_sieve":  T_bkz,
+            "T_sieve":  2**log2_T_bkz,
             "T_lll":    T_lll,
-            "T":        T,
+            "T":        2**log2_T,
             "lambda":   lam,
             "broken":   broken,
         }
