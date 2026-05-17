@@ -959,6 +959,24 @@ class MATZOV(GJ21):
     }
 
 
+class ELHL26(ReductionCost):
+
+    __name__ = "ELHL26"
+    short_vectors = ReductionCost._short_vectors_sieve
+
+    def __call__(self, beta, d, B=None):
+        """
+
+        See [AC:ELHL26]_.
+
+        :param beta: Block size ≥ 2.
+        :param d: Lattice dimension.
+        :param B: Bit-size of entries.
+        """
+
+        return ZZ(2 * d) + RR(0.2075 * beta + 16.4)
+
+
 def cost(cost_model, beta, d, B=None, predicate=True, **kwds):
     """
     Return cost dictionary for computing vector of norm` δ_0^{d-1} Vol(Λ)^{1/d}` using provided lattice
@@ -1012,3 +1030,4 @@ class RC:
     GJ21 = GJ21()
     LaaMosPol14 = LaaMosPol14()
     ChaLoy21 = ChaLoy21()
+    ELHL26 = ELHL26()
