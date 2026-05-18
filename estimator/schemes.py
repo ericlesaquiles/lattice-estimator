@@ -3,6 +3,7 @@ from .nd import stddevf, Binary, CenteredBinomial, DiscreteGaussian, SparseTerna
 from .lwe_parameters import LWEParameters
 from .ntru_parameters import NTRUParameters
 from .sis_parameters import SISParameters
+from .agcd_parameters import AGCDParameters
 
 # NIST PQC Round 3 Finalists
 
@@ -576,3 +577,18 @@ CHHS_4096_82 = LWEParameters(
     Xe=DiscreteGaussian(stddev=stddevf(8)),
     tag="CHHS_4096_82",
 )
+
+# AGCD Parameters
+
+dghv_params = AGCDParameters(
+    gamma = 19575950,
+    eta = 2698,
+    rho = 71
+)
+
+hilder_params =  AGCDParameters(
+    gamma = 680,
+    eta = 105,
+    rho = 100
+)
+
