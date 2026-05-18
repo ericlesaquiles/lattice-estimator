@@ -75,11 +75,13 @@ class Estimate:
         #
         # Note: condition uses i+3 with i = n-1, so i+3 = n+2.
 
-        log_delta0_bound = (1 / n) * (gap - signal / n - 0.5 * math.log2(n * (n + 2)))
+        log_delta0_bound = (1 / n) * (gap - signal / n - 0.5 * math.log2(n * (n + 2))) # Xu's estimate
 
         if log_delta0_bound <= 0:
-            # Attack cannot achieve a useful delta_0 with this n
+            # Xu's attack cannot achieve a useful delta_0 with this n
             # (scheme is secure against this attack at these parameters)
+            # use Hilder's estimate instead
+            log_delta0_bound = gap**2 /(4*gamma) # Hilder's estimate
             if verbose:
                 print(f"\n  WARNING: delta_0 bound is non-positive ({log_delta0_bound:.6f}).")
                 print("  The scheme appears secure against this OL attack.")
@@ -96,6 +98,7 @@ class Estimate:
         # ------------------------------------------------------------------
         # Step 3 — minimum BKZ blocksize beta
         # ------------------------------------------------------------------
+
         beta = reduction.beta(delta0)
 
         if beta is None:
