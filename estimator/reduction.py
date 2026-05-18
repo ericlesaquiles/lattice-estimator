@@ -5,6 +5,7 @@ Cost estimates for lattice redution.
 
 from sage.all import ZZ, RR, pi, e, find_root, ceil, floor, log, oo, round, sqrt
 from scipy.optimize import newton
+import math
 
 from .cost import Cost
 
@@ -973,8 +974,10 @@ class ELHL26(ReductionCost):
         :param d: Lattice dimension.
         :param B: Bit-size of entries.
         """
+        bkz_mult = 2
+        sieve_exp = 0.2075
 
-        return ZZ(2 * d) + RR(0.2075 * beta + 16.4)
+        return  math.log2(bkz_mult * d) + sieve_exp * beta + 16.4 #   ZZ(2 * d) + RR(0.2075 * beta + 16.4)
 
 
 def cost(cost_model, beta, d, B=None, predicate=True, **kwds):
