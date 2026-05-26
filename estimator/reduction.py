@@ -975,9 +975,9 @@ class ELHL26(ReductionCost):
         :param B: Bit-size of entries.
         """
         bkz_mult = 2
-        sieve_exp = 0.2075
+        sieve_exp = 0.292
 
-        return  math.log2(bkz_mult * d) + sieve_exp * beta + 16.4 #   ZZ(2 * d) + RR(0.2075 * beta + 16.4)
+        return  bkz_mult * d * 2**(sieve_exp * beta + 16.4) #   ZZ(2 * d) + RR(0.2075 * beta + 16.4)
 
 
 def cost(cost_model, beta, d, B=None, predicate=True, **kwds):
