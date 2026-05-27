@@ -30,11 +30,14 @@ class Estimate:
         params = params.normalize()
         gamma, eta, rho = params.gamma, params.eta, params.rho
 
+        small_lattice_dim = 40
+
         trivial = False
         GCD = False
         broken = False
+        hkz = False
 
-        log2_T_bkz = float('inf')
+        log2_T_lattice = float('inf')
 
         # ------------------------------------------------------------------
         # Step 1 — feasibility check
@@ -65,6 +68,11 @@ class Estimate:
         # ------------------------------------------------------------------
         n_opt = 2 * signal / gap     # optimal n = 2*(gamma-rho)/(eta-rho)
         n = max(2, round(n_opt))
+        if n < 40:
+            if verbose:
+                print(f"  n = {n} is too small, so we may use HKZ instead of BKZ")
+            hkz = True
+            log2_T_lattice = log2(2**(0.292*n + 16.4))
 
         # Theorem 2 of Xu working condition (eq. 5), solved for log delta_0,
         # using i = n-1 (need n-1 independent orthogonal vectors):
@@ -74,6 +82,8 @@ class Estimate:
         #
         #  condition uses i+3 with i = n-1, so i+3 = n+2.
         log_delta0_bound = (1 / n) * (gap - signal/n - 0.5 * log2(n * (n + 2)))
+        delta0 = 2 ** log_delta0_bound
+
 
         if log_delta0_bound <= 0:
             # Xu's attack cannot achieve a useful delta_0 with this n
@@ -81,7 +91,6 @@ class Estimate:
             if verbose:
                 print(f"\n  WARNING: delta_0 bound is non-positive ({log_delta0_bound:.6f}). Falling back to Hilder's estimate?")
                 print("  The scheme appears secure against this OL attack.")
-
 
 
         hilder_n = 2*gamma/gap # estimated from Hilder's thesis
@@ -92,17 +101,12 @@ class Estimate:
             print(f"  hilder_delta0_bound    = {hilder_delta0_bound:.8f}")
             if hilder_delta0_bound > 1:
                 beta = reduction.beta(hilder_delta0_bound)
-                hilder_log2_T_bkz = log2(red_cost_model(beta, hilder_n))
+                hilder_log2_T_lattice = log2(red_cost_model(beta, hilder_n))
                 print(f"  hilder beta            = {beta:.8f}")
-                print(f"  hilder lambda          = {hilder_log2_T_bkz:.8f}")
+                print(f"  hilder lambda          = {hilder_log2_T_lattice:.8f}")
             print("######## ######## ######## ########")
 
-
-
-
-        delta0 = 2 ** log_delta0_bound
-
-        if delta0 > 1:
+        if delta0 > 1 and not hkz:
             if verbose:
                 print(f"\n=== Step 2: Optimal n and delta_0 ===")
                 print(f"  Optimal n (continuous) = {float(n_opt):.4f}")
@@ -131,23 +135,20 @@ class Estimate:
             # Sieving-dominated cost: T = 8 * n * 2^(0.292*beta + 16.4)
             # log2_T_sieve = math.log2(8 * n) + 0.292 * beta + 16.4
             # Actually we outsource the cost model
-            log2_T_bkz = log2(red_cost_model(beta, n))
-
-            # Actual cost is the bottleneck
-            log2_T = log2_T_bkz
+            log2_T_lattice = log2(red_cost_model(beta, n))
 
         # Estimates time taken for GCD attack (as per section 4 of "Efficient AGCD-based homomorphic encryption for matrix and vector arithmetic)
         # Vanilla AGCD takes n = 1
         T_gcd = rho**2 * 2**(rho + rho/2) * gamma * log2(gamma)
 
         # Return if GCD attack is better than reduction
-        if delta0 < 1 or log2(T_gcd) < log2_T:
+        if delta0 < 1 or log2(T_gcd) < log2_T_lattice:
             GCD = True
-        if delta0 < 1 or eta < log2_T:
+        if delta0 < 1 or eta < log2_T_lattice:
             trivial = True
 
         # Actual running time of attack is the minimum of the attacks taken into consideration
-        log2_T = min(log2_T, eta, log2(T_gcd)) if delta0 > 1 else  min(eta, log2(T_gcd))
+        log2_T = min(log2_T_lattice, eta, log2(T_gcd)) if delta0 > 1 else  min(eta, log2(T_gcd))
         T = 2**log2_T
 
         # lambda in bits
@@ -156,7 +157,7 @@ class Estimate:
         if verbose:
             print(f"\n=== Step 4: Attack Cost  ===")
             if delta0 > 1:
-                print(f"  Reduction cost:  log2(T_bkz) = {log2_T_bkz:.2f} bits")
+                print(f"  Reduction cost:  log2(T_lattice) = {log2_T_lattice:.2f} bits")
             print(f"  Trivial cost:  eta           = {eta} bits")
             print(f"  GCD cost:      log2(T_gcd)   = {log2(T_gcd):.2f} bits")
 
@@ -172,8 +173,8 @@ class Estimate:
 
         return {
             "delta0":   delta0,
-            "beta":     beta if delta0 > 1 else None,
-            "T_bkz":  2**log2_T_bkz,
+            "beta":     beta if delta0 > 1 and not hkz else None,
+            "T_lattice":    2**log2_T_lattice,
             "T":        2**log2_T,
             "lambda":   lam,
         }
