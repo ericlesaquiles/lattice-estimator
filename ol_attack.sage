@@ -3,151 +3,108 @@ from sage.all import *
 ##############################################################################
 # Generate AGCD samples
 ##############################################################################
-
-gamma = 157
-eta   = 128
-rho   = 121
-
 def generate_agcd_samples(gamma, eta, rho, n):
-
-    lower_p = 2^(eta - 1)
-    upper_p = 2^eta - 1
-
+    lower_p = 2**(eta - 1)
+    upper_p = 2**eta - 1
     p = random_prime(upper_p, lbound=lower_p)
-
     samples = []
-
     for _ in range(n):
-
-        r = ZZ.random_element(-2^rho, 2^rho)
-
+        r = ZZ.random_element(-2**rho, 2**rho)
         q_bits = gamma - eta
-        q = ZZ.random_element(2^(q_bits - 1), 2^q_bits)
-
-        x = p*q + r
-
+        q = ZZ.random_element(2**(q_bits - 1), 2**q_bits)
+        x = p * q + r
         samples.append(x)
-
     return p, samples
-
 
 ##############################################################################
 # Orthogonal lattice attack
 #
 # Following the standard AGCD orthogonal lattice construction.
+#
+#          [ x1     x2 ... xt ]
+#          [ 2^rho  0  ...  0 ]
+#    B  =  [ 0   2^rho ...  0 ]
+#          [ 0 ...   0  2^rho ]
+#
+# The lattice L is spanned by the *columns* of B.
+# We reduce B.T (whose rows span L) with BKZ to find t short vectors vᵢ
+# orthogonal to w = (1, r1/2^rho, ..., rt/2^rho).
+# Collecting those into V and solving V·w = 0 with w[0]=1 recovers the rᵢ's.
 ##############################################################################
-
-def orthogonal_lattice_attack(samples, block_size = 10):
-
+def orthogonal_lattice_attack(samples, rho, block_size=10):
     t = len(samples)
 
-    # We use:
-    #
-    #          [ 1  0  ...  0  x1 ]
-    #          [ 0  1  ...  0  x2 ]
-    #    B  =  [            ...   ]
-    #          [ 0  0  ...  1  xt ]
-    #          [ 0  0  ...  0  X  ]
-    #
-    # where X is a scaling factor.
-    #
-    # Short vectors correspond to relations:
-    #
-    #    sum(a_i x_i) ≈ small
-    #
-
-    X = 2^(samples[0].nbits())
-
-    B = Matrix(ZZ, t + 1, t + 1)
-
+    # Build the (t+1) x t basis matrix B
+    B = Matrix(ZZ, t + 1, t)
     for i in range(t):
-        B[i, i] = 2**rho
-        B[i, t] = samples[i]
+        B[0, i]     = samples[i]   # first row: the AGCD samples
+        B[i + 1, i] = 2**rho       # diagonal block: 2^rho  (Bug 1 fixed: rho not ρ)
 
-    B[t, t] = X
-
-    print("[+] Running BKZ...")
-
-    Bred = B.BKZ(block_size = block_size)
-
+    print("[+] Running BKZ on B^T ...")
+    # B.T has shape t x (t+1); its rows span L
+    V = B.T.BKZ(block_size=block_size)
     print("[+] Reduced basis obtained.")
 
-    short = Bred[0]
+    # Bug 2 fixed: recover w from the right kernel of V
+    # V has shape t x (t+1); w lives in its right kernel
+    K = V.right_kernel().basis()
+    if len(K) == 0:
+        raise ValueError("Right kernel is empty — BKZ did not find enough short vectors.")
 
-    coeffs = list(short[:t])
+    # Normalise so that the first coordinate is 1
+    w = K[0]
+    if w[0] == 0:
+        raise ValueError("w[0] = 0 — unexpected kernel vector shape.")
+    w = w / w[0]
 
-    # Compute the integer combination
-    relation = sum(coeffs[i] * samples[i] for i in range(t))
+    # Recover noise terms rᵢ = round(wᵢ₊₁ · 2^rho)
+    noise = [ZZ(round(w[i + 1] * 2**rho)) for i in range(t)]
 
-    print("\n[+] Short relation found:")
-    print("coefficients =", coeffs)
+    # Recover candidate p
+    denoised = [samples[i] - noise[i] for i in range(t)]
+    p_candidate = gcd(denoised)
 
-    print("\n[+] Combination:")
-    print("R =", relation)
+    print("[+] Noise terms recovered:", noise[:4], "...")
+    print("[+] Candidate p (gcd of denoised samples):", p_candidate)
 
+    # Bug 3 fixed: return only quantities that are actually computed
     return {
-        "basis": B,
-        "reduced_basis": Bred,
-        "coefficients": coeffs,
-        "relation": relation
+        "basis":        B,
+        "reduced_basis": V,
+        "w":            w,
+        "noise":        noise,
+        "p_candidate":  p_candidate,
     }
 
-
 ##############################################################################
-# Recover p using several short relations
+# Recover p
 ##############################################################################
-
-def recover_p(samples, trials=10):
-
-    relations = []
-
-    for _ in range(trials):
-
-        res = orthogonal_lattice_attack(samples)
-
-        R = abs(res["relation"])
-
-        if R != 0:
-            relations.append(R)
-
-    if len(relations) < 2:
-        print("[-] Not enough relations.")
+def recover_p(samples, rho, block_size=10):
+    res = orthogonal_lattice_attack(samples, rho, block_size=block_size)
+    g = res["p_candidate"]
+    if g == 0:
+        print("[-] Recovery failed: gcd is 0.")
         return None
-
-    g = relations[0]
-
-    for r in relations[1:]:
-        g = gcd(g, r)
-
     return g
-
 
 ##############################################################################
 # Test
 ##############################################################################
-
-
-def test(gamma = 157,
-         eta   = 128,
-         rho   = 121,
-         n     = 9):
+def test(gamma=157, eta=128, rho=121, n=25, block_size=25):
     print("[+] Generating AGCD samples...")
-    
     p, samples = generate_agcd_samples(gamma, eta, rho, n)
-    
     print("\nSecret p =", p)
-    
+
     print("\n[+] Launching orthogonal lattice attack...\n")
-    
-    res = orthogonal_lattice_attack(samples)
-    
+    res = orthogonal_lattice_attack(samples, rho, block_size=block_size)
+
     print("\n[+] Attempting recovery of p...\n")
-    
-    g = recover_p(samples, trials=5)
-    
-    print("\nRecovered gcd =", g)
-    
-    if g % p == 0:
-        print("\n[SUCCESS] Recovered a multiple of p.")
+    g = recover_p(samples, rho, block_size=block_size)
+    print("\nRecovered value =", g)
+
+    if g is not None and p % g == 0:
+        print("\n[SUCCESS] Recovered a divisor of p (likely p itself).")
     else:
         print("\n[FAILURE]")
+
+test()
