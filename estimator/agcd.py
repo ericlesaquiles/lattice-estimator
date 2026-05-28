@@ -39,6 +39,8 @@ class Estimate:
 
         log2_T_lattice = float('inf')
 
+        lambdas = []
+
         # ------------------------------------------------------------------
         # Step 1 — feasibility check
         # ------------------------------------------------------------------
@@ -72,8 +74,14 @@ class Estimate:
             if verbose:
                 print(f"  n = {n} is too small, so we may use HKZ instead of BKZ")
             hkz = True
-            log2_T_lattice = log2(2**(0.292*n + 16.4))
+        try:
+            log2_T_hkz = 0.292*n + 16.4
+            T_hkz = 2**(0.292*n + 16.4)
+        except OverflowError:
+            log2_T_hkz = float("inf")
+            T_hkz = float("inf")
 
+        lambdas.append(log2_T_hkz)
         # Theorem 2 of Xu working condition (eq. 5), solved for log delta_0,
         # using i = n-1 (need n-1 independent orthogonal vectors):
         #
@@ -94,15 +102,18 @@ class Estimate:
 
 
         hilder_n = 2*gamma/gap # estimated from Hilder's thesis
-        hilder_delta0_bound = 2**(gap/n - gamma/n**2) # (gap - gamma/n)/n
+        hilder_delta0_bound = 2**(gap/hilder_n - gamma/hilder_n**2) # (gap - gamma/n)/n
+        if hilder_delta0_bound > 1:
+            hilder_beta = reduction.beta(hilder_delta0_bound)
+            hilder_log2_T_lattice = log2(red_cost_model(hilder_beta, hilder_n))
+            lambdas.append(hilder_log2_T_lattice)
+
         if verbose:
             print("######## Hilder's estimation ########")
             print(f"  hilder_n               = {hilder_n}")
             print(f"  hilder_delta0_bound    = {hilder_delta0_bound:.8f}")
             if hilder_delta0_bound > 1:
-                beta = reduction.beta(hilder_delta0_bound)
-                hilder_log2_T_lattice = log2(red_cost_model(beta, hilder_n))
-                print(f"  hilder beta            = {beta:.8f}")
+                print(f"  hilder beta            = {hilder_beta:.8f}")
                 print(f"  hilder lambda          = {hilder_log2_T_lattice:.8f}")
             print("######## ######## ######## ########")
 
@@ -136,10 +147,13 @@ class Estimate:
             # log2_T_sieve = math.log2(8 * n) + 0.292 * beta + 16.4
             # Actually we outsource the cost model
             log2_T_lattice = log2(red_cost_model(beta, n))
+            lambdas.append(log2_T_lattice)
 
         # Estimates time taken for GCD attack (as per section 4 of "Efficient AGCD-based homomorphic encryption for matrix and vector arithmetic)
         # Vanilla AGCD takes n = 1
         T_gcd = rho**2 * 2**(rho + rho/2) * gamma * log2(gamma)
+        lambdas.append(log2(T_gcd))
+        lambdas.append(eta)
 
         # Return if GCD attack is better than reduction
         if delta0 < 1 or log2(T_gcd) < log2_T_lattice:
@@ -148,7 +162,8 @@ class Estimate:
             trivial = True
 
         # Actual running time of attack is the minimum of the attacks taken into consideration
-        log2_T = min(log2_T_lattice, eta, log2(T_gcd)) if delta0 > 1 else  min(eta, log2(T_gcd))
+        #log2_T = min(log2_T_lattice, eta, log2(T_gcd)) if delta0 > 1 else  min(eta, log2(T_gcd))
+        log2_T = min(lambdas)
         T = 2**log2_T
 
         # lambda in bits
@@ -171,12 +186,31 @@ class Estimate:
             if GCD:
                 print(f"  WARNING: GCD attack is better than lattice reduction.")
 
-        return {
-            "delta0":   delta0,
-            "beta":     beta if delta0 > 1 and not hkz else None,
-            "T_lattice":    2**log2_T_lattice,
-            "T":        2**log2_T,
-            "lambda":   lam,
-        }
+        return {"trivial": {
+                            "T_trivial (2^eta)": 2**eta,
+                            "lambda (eta)": eta
+                           },
+                "gcd": {
+                        "T_gcd": T_gcd,
+                        "lambda": log2(T_gcd)
+                       },
+                "ol_bkz": {
+                                  "delta0":   delta0,
+                                  "beta":     beta if delta0 > 1 and not hkz else None,
+                                  "T_lattice":    2**log2_T_lattice,
+                                  "lambda":   log2_T_lattice,
+                                 },
+                "ol_hilder_fallback": {
+                    "hilder_n": hilder_n,
+                    "hilder_delta0_bound": hilder_delta0_bound,
+                    "hilder_beta": hilder_beta,
+                    "lambda": hilder_log2_T_lattice,
+                },
+                "ol_hkz": {"T": T_hkz, "lambda": log2_T_hkz},
+                "final": {
+                            "lambda": log2_T,
+                            "T": T
+                         }
+               }
 
 estimate = Estimate()
