@@ -1,5 +1,3 @@
-# Project Title
-
 **Security Estimates for AGCD (Approximate Greatest Common Divisor) — a fork of the Lattice Estimator**
 
 This artifact accompanies the paper *"On the concrete hardness of the Approximate GCD problem "*, submitted to SBSeg 2026, main track. The paper studies the security of cryptographic schemes based on the AGCD (*Approximate Greatest Common Divisor*) problem, focusing on the orthogonal lattice attack by Xu, Sarkar and Hu, and proposes a cost estimator for this attack, in the spirit of the well-established [Lattice Estimator](https://github.com/malb/lattice-estimator) for LWE/SIS/NTRU problems.
