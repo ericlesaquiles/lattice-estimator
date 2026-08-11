@@ -152,7 +152,7 @@ This minimal test confirms that the installation worked and lets reviewers obser
 
    ```python
    from estimator import AGCD
-   agcd_params = AGCD.Parameters(gamma=20, eta=15, rho=10, lamda=20)
+   agcd_params = AGCD.Parameters(gamma=20, eta=15, rho=10)
    AGCD.estimate(agcd_params)
    ```
 
