@@ -4,7 +4,7 @@ This artifact accompanies the paper *"On the concrete hardness of the Approximat
 
 The artifact consists of:
 
-- a **security estimator** (`estimator/agcd.py`, `estimator/agcd_parameters.py`) that, given a set of AGCD parameters `(gamma, eta, rho)`, computes the estimated cost (in bits, `log2(T)`) of the orthogonal lattice attack, the trivial attack, and the GCD attack, following Chen's BKZ blocksize analysis and the lattice-reduction cost models already implemented in the Lattice Estimator (MATZOV, ELHL26, among others);
+- a **security estimator** (`estimator/agcd.py`, `estimator/agcd_parameters.py`) that, given a set of AGCD parameters `(gamma, eta, rho)`, computes the estimated cost (in bits, `log2(T)`) of the orthogonal lattice attack, the trivial attack, and the GCD attack, following Chen's BKZ blocksize analysis and the lattice-reduction cost models already implemented in the Lattice Estimator (MATZOV by default, among others);
 - a **practical implementation of the orthogonal lattice attack** in SageMath (`ol_attack.sage`), used to empirically validate the estimator's predictions on toy instances;
 - a **Jupyter/SageMath notebook** (`agcd_test_notebook.ipynb`) applying the estimator to parameter sets taken from the literature (DGHV, the Cheon et al. scheme, Benarroch–Lepoint, among others);
 - a parameter-sweep utility (`param_sweep.py`) reused from the original Lattice Estimator.
@@ -34,7 +34,7 @@ The repository's directory structure is as follows:
 │   ├── agcd.py                 # Core of the AGCD security estimator (orthogonal lattice attack,
 │   │                           #   trivial attack and GCD attack)
 │   ├── agcd_parameters.py      # AGCD parameter data structure (gamma, eta, rho, ...)
-│   ├── reduction.py            # Lattice-reduction cost models (MATZOV, ELHL26, ...)
+│   ├── reduction.py            # Lattice-reduction cost models (MATZOV, ADPS16, ...)
 │   └── ...                     # Remaining modules inherited from the Lattice Estimator (LWE, SIS, NTRU, etc.)
 ├── ol_attack.sage              # Practical implementation of the orthogonal lattice attack in SageMath
 ├── agcd_test_notebook.ipynb    # Notebook applying the estimator to parameters from the literature
@@ -186,11 +186,11 @@ This minimal test confirms that the installation worked and lets reviewers obser
 
    AGCD.estimate(AGCD.Parameters(gamma=680, eta=105, rho=100))
    AGCD.estimate(AGCD.Parameters(gamma=157, eta=128, rho=121), red_cost_model=RC.MATZOV)
-   AGCD.estimate(AGCD.Parameters(gamma=1024, eta=128, rho=93), red_cost_model=RC.ELHL26)
+   AGCD.estimate(AGCD.Parameters(gamma=1024, eta=128, rho=93), red_cost_model=RC.ADPS16)
    AGCD.estimate(AGCD.Parameters(gamma=175, eta=150, rho=110))
    ```
 
-**Relevant flags/configuration:** the `red_cost_model` parameter (e.g., `RC.MATZOV`, `RC.ELHL26`) selects the lattice-reduction cost model used in the estimate; use the same model cited in the paper for each parameter set.
+**Relevant flags/configuration:** the `red_cost_model` parameter (e.g., `RC.MATZOV`, the default, or `RC.ADPS16`) selects the lattice-reduction cost model used in the estimate. The custom `ELHL26` model used for some estimates in the paper is not available on this branch; use the `agcd` branch to reproduce those.
 
 **Expected time:** a few seconds per parameter set (all four together: under 1 minute).
 
