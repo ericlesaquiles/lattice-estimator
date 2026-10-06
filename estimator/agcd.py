@@ -62,10 +62,27 @@ def _log2_delta_hkz(n):
     return ((lgamma(n / 2 + 1) / n) / log(2) - 0.5 * log2(pi)) / n
 
 
-def _log2_cost(red_cost_model, beta, n, condition):
-    """log2 of the cost of the attack: one reduction, or 2n-1 of them for xu_single."""
+def _entry_bits(gamma, rho, condition):
+    """
+    Bit size B of the largest basis entries, passed to the cost model (which then
+    adds the cost of LLL on entries of that size).
+
+    The 2nd OL attack can use the rounding variant of Xu et al., whose first column
+    is floor(x_i / alpha), with alpha ~ 2^rho, so its entries have about gamma - rho
+    bits. The basis of the lattice orthogonal to x (1st attack, "pereira") is
+    computed from the x_i themselves, which have gamma bits.
+    """
+    return gamma if condition == "pereira" else gamma - rho
+
+
+def _log2_cost(red_cost_model, beta, n, condition, B):
+    """
+    log2 of the cost of the attack: one reduction, or 2n-1 of them for xu_single.
+
+    :param B: bit size of the basis entries (see ``_entry_bits``).
+    """
     try:
-        log2_T = float(log2(red_cost_model(beta, n)))
+        log2_T = float(log2(red_cost_model(beta, n, B=B)))
     except (OverflowError, ValueError, ZeroDivisionError):
         return float("inf")
     if condition == "xu_single":
@@ -133,9 +150,10 @@ def _ol_best(gap, signal, gamma, red_cost_model, condition, beta_slack=20):
                 continue
             candidates.append((n, beta, "BKZ"))
 
+    B = _entry_bits(gamma, gamma - signal, condition)  # rho = gamma - signal
     best = None
     for n, beta, algorithm in candidates:
-        log2_T = _log2_cost(red_cost_model, beta, n, condition)
+        log2_T = _log2_cost(red_cost_model, beta, n, condition, B)
         if log2_T == float("inf"):
             continue
         if best is None or log2_T < best["lambda"]:
@@ -145,6 +163,7 @@ def _ol_best(gap, signal, gamma, red_cost_model, condition, beta_slack=20):
                 "log2_delta0_bound": bound(n),
                 "algorithm": algorithm,
                 "beta": beta,
+                "B": B,
                 "T_lattice": 2**log2_T,
                 "lambda": log2_T,
             }
