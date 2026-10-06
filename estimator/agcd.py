@@ -237,8 +237,13 @@ class Estimate:
         # Step 3 - GCD and trivial attacks
         # ------------------------------------------------------------------
         # GCD attack, as per section 4 of "Efficient AGCD-based homomorphic
-        # encryption for matrix and vector arithmetic". Vanilla AGCD takes n = 1.
-        T_gcd = rho**2 * 2**(rho + rho/2) * gamma * log2(gamma)
+        # encryption for matrix and vector arithmetic" (Pereira, 2020), with n = 1
+        # (vanilla AGCD) and no public x0: T = (n rho)^2 2^(n rho) gamma log gamma.
+        # With a public x0 = p q0 + r0, r0 of rho0 bits, the paper gives
+        # (n rho)^2 2^(rho0 + n rho/2) gamma log gamma, which is cheaper only when
+        # rho0 < rho/2 (e.g. a noiseless x0); (gamma, eta, rho) does not say
+        # whether a scheme publishes such an x0, so the general case is used.
+        T_gcd = rho**2 * 2**rho * gamma * log2(gamma)
 
         # ------------------------------------------------------------------
         # Step 4 - lambda: the cheapest attack
